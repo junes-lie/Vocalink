@@ -1,3 +1,3 @@
-# Vocal Duet MVP
+# Vocalink
 
-430px mobile web MVP deployment source.
+Production candidate verified on Vercel Preview build.
