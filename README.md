@@ -1,3 +1,3 @@
-# Vocal Duet MVP
+# Vocalink
 
-430px mobile web MVP deployment source.
+Ready for production.
