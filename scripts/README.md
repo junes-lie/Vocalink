@@ -1,1 +1,0 @@
-`build.mjs` reconstructs the previously QA-verified app at build time, injects the fixed card CSS and local Git image assets, and writes an independent `dist/index.html`.

@@ -1,1 +1,0 @@
-Image blobs and final tree are the only remaining source changes.
