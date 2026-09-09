@@ -1,0 +1,1 @@
+Image assets are embedded into the production build during `npm run build`.
