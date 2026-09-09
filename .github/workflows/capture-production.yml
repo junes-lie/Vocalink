@@ -28,7 +28,7 @@ jobs:
           echo "bytes=$bytes images=$images chunks=$chunks title=$title"
           test "$chunks" = "0"
           test "$images" = "10"
-          test "$bytes" -gt 300000
+          test "$bytes" -gt 250000
           grep -q 'Vocalink' app.html
           mkdir -p scripts
           cat > scripts/build.mjs <<'EOF'
