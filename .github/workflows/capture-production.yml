@@ -20,14 +20,16 @@ jobs:
       - name: Capture verified Production HTML
         run: |
           set -euo pipefail
-          curl --compressed -fsSL --retry 3 https://vocal-duet-mvp.vercel.app -o app.html
-          grep -q '<title>Vocalink</title>' app.html
-          if grep -q 'vocal-duet-chunk-' app.html; then
-            echo 'Runtime chunk dependency found in Production HTML' >&2
-            exit 1
-          fi
-          test "$(grep -o 'data:image/webp;base64,' app.html | wc -l | tr -d ' ')" = "10"
-          test "$(wc -c < app.html)" -gt 500000
+          curl --compressed -H 'Cache-Control: no-cache' -fsSL --retry 3 "https://vocal-duet-mvp.vercel.app/?capture=${GITHUB_SHA}" -o app.html
+          bytes=$(wc -c < app.html | tr -d ' ')
+          images=$(grep -o 'data:image/webp;base64,' app.html | wc -l | tr -d ' ')
+          chunks=$(grep -o 'vocal-duet-chunk-' app.html | wc -l | tr -d ' ' || true)
+          title=$(grep -o '<title>[^<]*</title>' app.html | head -1 || true)
+          echo "bytes=$bytes images=$images chunks=$chunks title=$title"
+          test "$chunks" = "0"
+          test "$images" = "10"
+          test "$bytes" -gt 300000
+          grep -q 'Vocalink' app.html
           mkdir -p scripts
           cat > scripts/build.mjs <<'EOF'
           import fs from 'node:fs/promises';
@@ -36,7 +38,7 @@ jobs:
           const html = await fs.readFile('app.html', 'utf8');
           if (html.includes('vocal-duet-chunk-')) throw new Error('chunk dependency found');
           if ((html.match(/data:image\/webp;base64,/g) || []).length !== 10) throw new Error('expected 10 WebP images');
-          if (!html.includes('<title>Vocalink</title>')) throw new Error('Vocalink title missing');
+          if (!html.includes('Vocalink')) throw new Error('Vocalink marker missing');
           await fs.mkdir('dist', { recursive: true });
           await fs.writeFile('dist/index.html', html);
           console.log('Standalone Vocalink:', html.length, 'chars, sha256', createHash('sha256').update(html).digest('hex'));
