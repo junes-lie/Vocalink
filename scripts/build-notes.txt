@@ -1,0 +1,1 @@
+Build-time only dependency on the legacy Vercel chunks. The emitted dist/index.html is standalone and must contain no vocal-duet-chunk URLs before production cleanup.
