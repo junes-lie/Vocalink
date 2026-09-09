@@ -1,3 +1,3 @@
 # Vocalink
 
-Production candidate verified on Vercel Preview build.
+Production candidate: standalone build, verified WebP assets, fixed voice-card heights.
