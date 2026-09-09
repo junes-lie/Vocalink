@@ -1,0 +1,58 @@
+name: Capture standalone production
+
+on:
+  push:
+    branches: [production-fix]
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: production-fix
+          fetch-depth: 0
+
+      - name: Capture verified Production HTML
+        run: |
+          set -euo pipefail
+          curl --compressed -fsSL --retry 3 https://vocal-duet-mvp.vercel.app -o app.html
+          grep -q '<title>Vocalink</title>' app.html
+          if grep -q 'vocal-duet-chunk-' app.html; then
+            echo 'Runtime chunk dependency found in Production HTML' >&2
+            exit 1
+          fi
+          test "$(grep -o 'data:image/webp;base64,' app.html | wc -l | tr -d ' ')" = "10"
+          test "$(wc -c < app.html)" -gt 500000
+          mkdir -p scripts
+          cat > scripts/build.mjs <<'EOF'
+          import fs from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+
+          const html = await fs.readFile('app.html', 'utf8');
+          if (html.includes('vocal-duet-chunk-')) throw new Error('chunk dependency found');
+          if ((html.match(/data:image\/webp;base64,/g) || []).length !== 10) throw new Error('expected 10 WebP images');
+          if (!html.includes('<title>Vocalink</title>')) throw new Error('Vocalink title missing');
+          await fs.mkdir('dist', { recursive: true });
+          await fs.writeFile('dist/index.html', html);
+          console.log('Standalone Vocalink:', html.length, 'chars, sha256', createHash('sha256').update(html).digest('hex'));
+          EOF
+
+      - name: Remove temporary build sources
+        run: |
+          rm -rf assets/fragments assets/b64 assets/images
+          rm -f README-FIX.md STATUS.txt
+          rm -f scripts/BUILD_STATE.txt scripts/IMAGE_ORDER.txt scripts/README.md scripts/build-notes.txt scripts/final-note.txt scripts/ignore-this.txt scripts/no-more-markers.txt scripts/card-fix.css
+
+      - name: Commit standalone source
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Capture standalone Production source' || exit 0
+          git push origin HEAD:production-fix
